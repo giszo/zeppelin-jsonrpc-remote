@@ -16,6 +16,10 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
 {
     // library
     m_rpcMethods["library_scan"] = std::bind(&Server::libraryScan, this, std::placeholders::_1, std::placeholders::_2);
+    m_rpcMethods["library_get_statistics"] = std::bind(&Server::libraryGetStatistics,
+						       this,
+						       std::placeholders::_1,
+						       std::placeholders::_2);
 
     // library - artists
     m_rpcMethods["library_get_artists"] = std::bind(&Server::libraryGetArtists,
