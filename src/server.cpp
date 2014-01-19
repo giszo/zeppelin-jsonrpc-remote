@@ -214,6 +214,18 @@ void Server::libraryScan(const Json::Value& request, Json::Value& response)
 }
 
 // =====================================================================================================================
+void Server::libraryGetStatistics(const Json::Value& request, Json::Value& response)
+{
+    auto stat = m_library->getStorage().getStatistics();
+
+    response = Json::Value(Json::objectValue);
+    response["num_of_artists"] = stat.m_numOfArtists;
+    response["num_of_albums"] = stat.m_numOfAlbums;
+    response["num_of_files"] = stat.m_numOfFiles;
+    response["sum_of_song_length"] = stat.m_sumOfSongLength;
+}
+
+// =====================================================================================================================
 void Server::libraryGetArtists(const Json::Value& request, Json::Value& response)
 {
     auto artists = m_library->getStorage().getArtists();

@@ -27,6 +27,7 @@ class Server : public zeppelin::plugin::Plugin
 	std::unique_ptr<httpserver::HttpResponse> processRequest(const httpserver::HttpRequest& request);
 
 	void libraryScan(const Json::Value& request, Json::Value& response);
+	void libraryGetStatistics(const Json::Value& request, Json::Value& response);
 
 	// library - artists
 	void libraryGetArtists(const Json::Value& request, Json::Value& response);
