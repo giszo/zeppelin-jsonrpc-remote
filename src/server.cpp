@@ -142,7 +142,14 @@ std::unique_ptr<httpserver::HttpResponse> Server::processRequest(const httpserve
     if (it == m_rpcMethods.end())
 	return createJsonErrorReply(request, root, "invalid method");
 
-    it->second(params, result);
+    try
+    {
+	it->second(params, result);
+    }
+    catch (...)
+    {
+	return createJsonErrorReply(request, root, "invalid method call");
+    }
 
     Json::Value response(Json::objectValue);
     response["jsonrpc"] = "2.0";
@@ -220,6 +227,8 @@ void Server::libraryGetAlbums(const Json::Value& request, Json::Value& response)
 // =====================================================================================================================
 void Server::libraryGetAlbumsByArtist(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "artist_id", Json::intValue);
+
     auto albums = m_library->getStorage().getAlbumsByArtist(request["artist_id"].asInt());
 
     response = Json::Value(Json::arrayValue);
@@ -258,6 +267,8 @@ static inline void serializeFile(Json::Value& file, const zeppelin::library::Fil
 // =====================================================================================================================
 void Server::libraryGetFilesOfArtist(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "artist_id", Json::intValue);
+
     auto files = m_library->getStorage().getFilesOfArtist(request["artist_id"].asInt());
 
     response = Json::Value(Json::arrayValue);
@@ -275,6 +286,8 @@ void Server::libraryGetFilesOfArtist(const Json::Value& request, Json::Value& re
 // =====================================================================================================================
 void Server::libraryGetFilesOfAlbum(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "album_id", Json::intValue);
+
     auto files = m_library->getStorage().getFilesOfAlbum(request["album_id"].asInt());
 
     response = Json::Value(Json::arrayValue);
@@ -292,8 +305,12 @@ void Server::libraryGetFilesOfAlbum(const Json::Value& request, Json::Value& res
 // =====================================================================================================================
 void Server::libraryListDirectory(const Json::Value& request, Json::Value& response)
 {
-    auto directories = m_library->getStorage().listSubdirectories(request["directory_id"].asInt());
-    auto files = m_library->getStorage().getFilesOfDirectory(request["directory_id"].asInt());
+    requireType(request, "directory_id", Json::intValue);
+
+    int directoryId = request["directory_id"].asInt();
+
+    auto directories = m_library->getStorage().listSubdirectories(directoryId);
+    auto files = m_library->getStorage().getFilesOfDirectory(directoryId);
 
     response = Json::Value(Json::arrayValue);
     response.resize(directories.size() + files.size());
@@ -325,6 +342,8 @@ void Server::libraryListDirectory(const Json::Value& request, Json::Value& respo
 // =====================================================================================================================
 void Server::libraryGetMetadata(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "id", Json::intValue);
+
     auto file = m_library->getStorage().getFile(request["id"].asInt());
 
     response = Json::Value(Json::objectValue);
@@ -340,6 +359,8 @@ void Server::libraryGetMetadata(const Json::Value& request, Json::Value& respons
 // =====================================================================================================================
 void Server::libraryUpdateMetadata(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "id", Json::intValue);
+
     zeppelin::library::File file(request["id"].asInt());
 
     file.m_artist = request["artist"].asString();
@@ -354,19 +375,9 @@ void Server::libraryUpdateMetadata(const Json::Value& request, Json::Value& resp
 // =====================================================================================================================
 void Server::playerQueueFile(const Json::Value& request, Json::Value& response)
 {
-    std::shared_ptr<zeppelin::library::File> file;
+    requireType(request, "id", Json::intValue);
 
-    try
-    {
-	file = m_library->getStorage().getFile(request["id"].asInt());
-    }
-    catch (const zeppelin::library::FileNotFoundException& e)
-    {
-	LOG("File not found with ID: " << request["id"].asInt());
-	return;
-    }
-
-    LOG("Queueing file: " << file->m_path << "/" << file->m_name);
+    auto file = m_library->getStorage().getFile(request["id"].asInt());
 
     m_ctrl->queue(file);
 }
@@ -374,11 +385,10 @@ void Server::playerQueueFile(const Json::Value& request, Json::Value& response)
 // =====================================================================================================================
 void Server::playerQueueDirectory(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "directory_id", Json::intValue);
+
     int directoryId = request["directory_id"].asInt();
 
-    LOG("Queueing directory: " << directoryId);
-
-    // TODO: handle not found exception here!
     auto directory = m_library->getStorage().getDirectory(directoryId);
     auto files = m_library->getStorage().getFilesOfDirectory(directoryId);
 
@@ -388,11 +398,10 @@ void Server::playerQueueDirectory(const Json::Value& request, Json::Value& respo
 // =====================================================================================================================
 void Server::playerQueueAlbum(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "id", Json::intValue);
+
     int albumId = request["id"].asInt();
 
-    LOG("Queueing album: " << albumId);
-
-    // TODO: handle not found exception here!
     auto album = m_library->getStorage().getAlbum(albumId);
     auto files = m_library->getStorage().getFilesOfAlbum(albumId);
 
@@ -475,12 +484,22 @@ void Server::playerQueueGet(const Json::Value& request, Json::Value& response)
 // =====================================================================================================================
 void Server::playerQueueRemove(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "index", Json::arrayValue);
+
     Json::Value index = request["index"];
 
     std::vector<int> i;
 
     for (Json::Value::ArrayIndex j = 0; j < index.size(); ++j)
-	i.push_back(index[j].asInt());
+    {
+	const Json::Value& item = index[j];
+
+	// make sure index contains only integers
+	if (!item.isInt())
+	    throw InvalidMethodCall();
+
+	i.push_back(item.asInt());
+    }
 
     m_ctrl->remove(i);
 }
@@ -529,6 +548,8 @@ void Server::playerStop(const Json::Value& request, Json::Value& response)
 // =====================================================================================================================
 void Server::playerSeek(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "seconds", Json::intValue);
+
     m_ctrl->seek(request["seconds"].asInt());
 }
 
@@ -547,12 +568,22 @@ void Server::playerNext(const Json::Value& request, Json::Value& response)
 // =====================================================================================================================
 void Server::playerGoto(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "index", Json::intValue);
+
     Json::Value index = request["index"];
 
     std::vector<int> i;
 
     for (Json::UInt j = 0; j < index.size(); ++j)
-	i.push_back(index[j].asInt());
+    {
+	const Json::Value& item = index[j];
+
+	// make sure index contains only integers
+	if (!item.isInt())
+	    throw InvalidMethodCall();
+
+	i.push_back(item.asInt());
+    }
 
     m_ctrl->goTo(i);
 }
@@ -566,6 +597,8 @@ void Server::playerGetVolume(const Json::Value& request, Json::Value& response)
 // =====================================================================================================================
 void Server::playerSetVolume(const Json::Value& request, Json::Value& response)
 {
+    requireType(request, "level", Json::intValue);
+
     m_ctrl->setVolume(request["level"].asInt());
 }
 
@@ -579,4 +612,11 @@ void Server::playerIncVolume(const Json::Value& request, Json::Value& response)
 void Server::playerDecVolume(const Json::Value& request, Json::Value& response)
 {
     m_ctrl->decVolume();
+}
+
+// =====================================================================================================================
+void Server::requireType(const Json::Value& request, const std::string& key, Json::ValueType type)
+{
+    if (!request.isMember(key) || request[key].type() != type)
+	throw InvalidMethodCall();
 }

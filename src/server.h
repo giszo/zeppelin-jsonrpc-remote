@@ -10,6 +10,15 @@
 #include <jsoncpp/json/value.h>
 
 #include <unordered_map>
+#include <stdexcept>
+
+class InvalidMethodCall : public std::runtime_error
+{
+    public:
+	InvalidMethodCall()
+	    : runtime_error("invalid method call")
+	{}
+};
 
 class Server : public zeppelin::plugin::Plugin
 {
@@ -69,6 +78,8 @@ class Server : public zeppelin::plugin::Plugin
 	void playerSetVolume(const Json::Value& request, Json::Value& response);
 	void playerIncVolume(const Json::Value& request, Json::Value& response);
 	void playerDecVolume(const Json::Value& request, Json::Value& response);
+
+	void requireType(const Json::Value& request, const std::string& key, Json::ValueType type);
 
     private:
 	std::shared_ptr<zeppelin::library::MusicLibrary> m_library;
