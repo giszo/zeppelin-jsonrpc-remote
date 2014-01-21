@@ -8,6 +8,9 @@
 #include <jsoncpp/json/reader.h>
 #include <jsoncpp/json/writer.h>
 
+#define REGISTER_RPC_METHOD(name, function) \
+    m_rpcMethods[name] = std::bind(&Server::function, this, std::placeholders::_1, std::placeholders::_2)
+
 // =====================================================================================================================
 Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
 	       const std::shared_ptr<zeppelin::player::Controller>& ctrl)
@@ -15,111 +18,52 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
       m_ctrl(ctrl)
 {
     // library
-    m_rpcMethods["library_scan"] = std::bind(&Server::libraryScan, this, std::placeholders::_1, std::placeholders::_2);
-    m_rpcMethods["library_get_statistics"] = std::bind(&Server::libraryGetStatistics,
-						       this,
-						       std::placeholders::_1,
-						       std::placeholders::_2);
+    REGISTER_RPC_METHOD("library_scan", libraryScan);
+    REGISTER_RPC_METHOD("library_get_statistics", libraryGetStatistics);
 
     // library - artists
-    m_rpcMethods["library_get_artists"] = std::bind(&Server::libraryGetArtists,
-						    this,
-						    std::placeholders::_1,
-						    std::placeholders::_2);
+    REGISTER_RPC_METHOD("library_get_artists", libraryGetArtists);
 
     // library - albums
-    m_rpcMethods["library_get_albums"] = std::bind(&Server::libraryGetAlbums,
-						   this,
-						   std::placeholders::_1,
-						   std::placeholders::_2);
-    m_rpcMethods["library_get_albums_by_artist"] = std::bind(&Server::libraryGetAlbumsByArtist,
-							     this,
-							     std::placeholders::_1,
-							     std::placeholders::_2);
+    REGISTER_RPC_METHOD("library_get_albums", libraryGetAlbums);
+    REGISTER_RPC_METHOD("library_get_albums_by_artist", libraryGetAlbumsByArtist);
 
     // library - files
-    m_rpcMethods["library_get_files_of_artist"] = std::bind(&Server::libraryGetFilesOfArtist,
-							    this,
-							    std::placeholders::_1,
-							    std::placeholders::_2);
-    m_rpcMethods["library_get_files_of_album"] = std::bind(&Server::libraryGetFilesOfAlbum,
-							   this,
-							   std::placeholders::_1,
-							   std::placeholders::_2);
+    REGISTER_RPC_METHOD("library_get_files_of_artist", libraryGetFilesOfArtist);
+    REGISTER_RPC_METHOD("library_get_files_of_album", libraryGetFilesOfAlbum);
 
     // library - directories
-    m_rpcMethods["library_list_directory"] = std::bind(&Server::libraryListDirectory,
-						       this,
-						       std::placeholders::_1,
-						       std::placeholders::_2);
+    REGISTER_RPC_METHOD("library_list_directory", libraryListDirectory);
 
     // library - metadata
-    m_rpcMethods["library_get_metadata"] = std::bind(&Server::libraryGetMetadata,
-						     this,
-						     std::placeholders::_1,
-						     std::placeholders::_2);
-    m_rpcMethods["library_update_metadata"] = std::bind(&Server::libraryUpdateMetadata,
-							this,
-							std::placeholders::_1,
-							std::placeholders::_2);
+    REGISTER_RPC_METHOD("library_get_metadata", libraryGetMetadata);
+    REGISTER_RPC_METHOD("library_update_metadata", libraryUpdateMetadata);
 
     // player queue
-    m_rpcMethods["player_queue_file"] = std::bind(&Server::playerQueueFile,
-						  this,
-						  std::placeholders::_1,
-						  std::placeholders::_2);
-    m_rpcMethods["player_queue_directory"] = std::bind(&Server::playerQueueDirectory,
-						       this,
-						       std::placeholders::_1,
-						       std::placeholders::_2);
-    m_rpcMethods["player_queue_album"] = std::bind(&Server::playerQueueAlbum,
-						   this,
-						   std::placeholders::_1,
-						   std::placeholders::_2);
-    m_rpcMethods["player_queue_get"] = std::bind(&Server::playerQueueGet,
-						 this,
-						 std::placeholders::_1,
-						 std::placeholders::_2);
-    m_rpcMethods["player_queue_remove"] = std::bind(&Server::playerQueueRemove,
-						    this,
-						    std::placeholders::_1,
-						    std::placeholders::_2);
-    m_rpcMethods["player_queue_remove_all"] = std::bind(&Server::playerQueueRemoveAll,
-							this,
-							std::placeholders::_1,
-							std::placeholders::_2);
+    REGISTER_RPC_METHOD("player_queue_file", playerQueueFile);
+    REGISTER_RPC_METHOD("player_queue_directory", playerQueueDirectory);
+    REGISTER_RPC_METHOD("player_queue_album", playerQueueAlbum);
+    REGISTER_RPC_METHOD("player_queue_get", playerQueueGet);
+    REGISTER_RPC_METHOD("player_queue_remove", playerQueueRemove);
+    REGISTER_RPC_METHOD("player_queue_remove_all", playerQueueRemoveAll);
 
     // player status
-    m_rpcMethods["player_status"] = std::bind(&Server::playerStatus,
-					      this,
-					      std::placeholders::_1,
-					      std::placeholders::_2);
+    REGISTER_RPC_METHOD("player_status", playerStatus);
 
     // player control
-    m_rpcMethods["player_play"] = std::bind(&Server::playerPlay, this, std::placeholders::_1, std::placeholders::_2);
-    m_rpcMethods["player_pause"] = std::bind(&Server::playerPause, this, std::placeholders::_1, std::placeholders::_2);
-    m_rpcMethods["player_stop"] = std::bind(&Server::playerStop, this, std::placeholders::_1, std::placeholders::_2);
-    m_rpcMethods["player_seek"] = std::bind(&Server::playerSeek, this, std::placeholders::_1, std::placeholders::_2);
-    m_rpcMethods["player_prev"] = std::bind(&Server::playerPrev, this, std::placeholders::_1, std::placeholders::_2);
-    m_rpcMethods["player_next"] = std::bind(&Server::playerNext, this, std::placeholders::_1, std::placeholders::_2);
-    m_rpcMethods["player_goto"] = std::bind(&Server::playerGoto, this, std::placeholders::_1, std::placeholders::_2);
+    REGISTER_RPC_METHOD("player_play", playerPlay);
+    REGISTER_RPC_METHOD("player_pause", playerPause);
+    REGISTER_RPC_METHOD("player_stop", playerStop);
+    REGISTER_RPC_METHOD("player_seek", playerSeek);
+    REGISTER_RPC_METHOD("player_prev", playerPrev);
+    REGISTER_RPC_METHOD("player_next", playerNext);
+    REGISTER_RPC_METHOD("player_goto", playerGoto);
 
-    m_rpcMethods["player_get_volume"] = std::bind(&Server::playerGetVolume,
-						  this,
-						  std::placeholders::_1,
-						  std::placeholders::_2);
-    m_rpcMethods["player_set_volume"] = std::bind(&Server::playerSetVolume,
-						  this,
-						  std::placeholders::_1,
-						  std::placeholders::_2);
-    m_rpcMethods["player_inc_volume"] = std::bind(&Server::playerIncVolume,
-						  this,
-						  std::placeholders::_1,
-						  std::placeholders::_2);
-    m_rpcMethods["player_dec_volume"] = std::bind(&Server::playerDecVolume,
-						  this,
-						  std::placeholders::_1,
-						  std::placeholders::_2);
+    // player volume
+    REGISTER_RPC_METHOD("player_get_volume", playerGetVolume);
+    REGISTER_RPC_METHOD("player_set_volume", playerSetVolume);
+    REGISTER_RPC_METHOD("player_inc_volume", playerIncVolume);
+    REGISTER_RPC_METHOD("player_dec_volume", playerDecVolume);
 }
 
 // =====================================================================================================================
