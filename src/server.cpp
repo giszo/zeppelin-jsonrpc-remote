@@ -568,7 +568,7 @@ void Server::playerNext(const Json::Value& request, Json::Value& response)
 // =====================================================================================================================
 void Server::playerGoto(const Json::Value& request, Json::Value& response)
 {
-    requireType(request, "index", Json::intValue);
+    requireType(request, "index", Json::arrayValue);
 
     Json::Value index = request["index"];
 
