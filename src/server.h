@@ -76,8 +76,6 @@ class Server : public zeppelin::plugin::Plugin
 
 	void playerGetVolume(const Json::Value& request, Json::Value& response);
 	void playerSetVolume(const Json::Value& request, Json::Value& response);
-	void playerIncVolume(const Json::Value& request, Json::Value& response);
-	void playerDecVolume(const Json::Value& request, Json::Value& response);
 
 	void requireType(const Json::Value& request, const std::string& key, Json::ValueType type);
 

@@ -62,8 +62,6 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
     // player volume
     REGISTER_RPC_METHOD("player_get_volume", playerGetVolume);
     REGISTER_RPC_METHOD("player_set_volume", playerSetVolume);
-    REGISTER_RPC_METHOD("player_inc_volume", playerIncVolume);
-    REGISTER_RPC_METHOD("player_dec_volume", playerDecVolume);
 }
 
 // =====================================================================================================================
@@ -600,18 +598,6 @@ void Server::playerSetVolume(const Json::Value& request, Json::Value& response)
     requireType(request, "level", Json::intValue);
 
     m_ctrl->setVolume(request["level"].asInt());
-}
-
-// =====================================================================================================================
-void Server::playerIncVolume(const Json::Value& request, Json::Value& response)
-{
-    m_ctrl->incVolume();
-}
-
-// =====================================================================================================================
-void Server::playerDecVolume(const Json::Value& request, Json::Value& response)
-{
-    m_ctrl->decVolume();
 }
 
 // =====================================================================================================================
