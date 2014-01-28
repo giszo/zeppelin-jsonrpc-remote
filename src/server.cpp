@@ -8,6 +8,8 @@
 #include <jsoncpp/json/reader.h>
 #include <jsoncpp/json/writer.h>
 
+#include <boost/lexical_cast.hpp>
+
 #define REGISTER_RPC_METHOD(name, function) \
     m_rpcMethods[name] = std::bind(&Server::function, this, std::placeholders::_1, std::placeholders::_2)
 
@@ -175,7 +177,8 @@ void Server::libraryGetStatistics(const Json::Value& request, Json::Value& respo
     response["num_of_artists"] = stat.m_numOfArtists;
     response["num_of_albums"] = stat.m_numOfAlbums;
     response["num_of_files"] = stat.m_numOfFiles;
-    response["sum_of_song_length"] = stat.m_sumOfSongLength;
+    response["sum_of_song_lengths"] = boost::lexical_cast<std::string>(stat.m_sumOfSongLengths);
+    response["sum_of_file_sizes"] = boost::lexical_cast<std::string>(stat.m_sumOfFileSizes);
 }
 
 // =====================================================================================================================
