@@ -1,29 +1,18 @@
 # -*- python -*-
 
-AddOption(
-    "--prefix",
-    dest = "prefix",
-    type = "string",
-    nargs = 1,
-    action = "store",
-    metavar = "DIR",
-    help = "installation prefix")
-AddOption(
-    "--zeppelin",
-    dest = "zeppelin",
-    type = "string",
-    nargs = 1,
-    action = "store",
-    metavar = "DIR",
-    help = "zeppelin installation path")
+vars = Variables()
+vars.Add(PathVariable('PREFIX', 'prefix used to install files', '/'))
 
-env = Environment(PREFIX = GetOption("prefix"))
+env = Environment(variables = vars)
 
 env["CPPFLAGS"] = ["-O2", "-Wall", "-Werror", "-Wshadow", "-std=c++11", "-pthread"]
 env["CPPPATH"] = [Dir("src")]
 
-if GetOption("zeppelin") :
-    env["CPPPATH"] += ["%s/%s" % (GetOption("zeppelin"), "/usr/include")]
+env["SHCXXCOMSTR"] = "Compiling $SOURCE"
+env["SHLINKCOMSTR"] = "Linking $TARGET"
+
+if "PREFIX" in env :
+    env["CPPPATH"] += ["%s/%s" % (env["PREFIX"], "/usr/include")]
 
 plugin = env.SharedLibrary(
     target = "jsonrpc-remote",
