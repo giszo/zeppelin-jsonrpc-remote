@@ -42,18 +42,17 @@ class Server : public zeppelin::plugin::Plugin
 	void libraryGetArtists(const Json::Value& request, Json::Value& response);
 
 	// library - albums
+	void libraryGetAlbumIdsByArtist(const Json::Value& request, Json::Value& response);
 	void libraryGetAlbums(const Json::Value& request, Json::Value& response);
-	void libraryGetAlbumsByArtist(const Json::Value& request, Json::Value& response);
 
 	// library - files
-	void libraryGetFilesOfArtist(const Json::Value& request, Json::Value& response);
-	void libraryGetFilesOfAlbum(const Json::Value& request, Json::Value& response);
+	void libraryGetFiles(const Json::Value& request, Json::Value& response);
+	void libraryGetFileIdsOfAlbum(const Json::Value& request, Json::Value& response);
 
 	// library - directories
 	void libraryListDirectory(const Json::Value& request, Json::Value& response);
 
 	// library - metadata
-	void libraryGetMetadata(const Json::Value& request, Json::Value& response);
 	void libraryUpdateMetadata(const Json::Value& request, Json::Value& response);
 
 	// player - queue

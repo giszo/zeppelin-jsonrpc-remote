@@ -27,18 +27,17 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
     REGISTER_RPC_METHOD("library_get_artists", libraryGetArtists);
 
     // library - albums
+    REGISTER_RPC_METHOD("library_get_album_ids_by_artist", libraryGetAlbumIdsByArtist);
     REGISTER_RPC_METHOD("library_get_albums", libraryGetAlbums);
-    REGISTER_RPC_METHOD("library_get_albums_by_artist", libraryGetAlbumsByArtist);
 
     // library - files
-    REGISTER_RPC_METHOD("library_get_files_of_artist", libraryGetFilesOfArtist);
-    REGISTER_RPC_METHOD("library_get_files_of_album", libraryGetFilesOfAlbum);
+    REGISTER_RPC_METHOD("library_get_files", libraryGetFiles);
+    REGISTER_RPC_METHOD("library_get_file_ids_of_album", libraryGetFileIdsOfAlbum);
 
     // library - directories
     REGISTER_RPC_METHOD("library_list_directory", libraryListDirectory);
 
     // library - metadata
-    REGISTER_RPC_METHOD("library_get_metadata", libraryGetMetadata);
     REGISTER_RPC_METHOD("library_update_metadata", libraryUpdateMetadata);
 
     // player queue
@@ -184,7 +183,21 @@ void Server::libraryGetStatistics(const Json::Value& request, Json::Value& respo
 // =====================================================================================================================
 void Server::libraryGetArtists(const Json::Value& request, Json::Value& response)
 {
-    auto artists = m_library->getStorage().getArtists();
+    std::vector<int> ids;
+
+    requireType(request, "id", Json::arrayValue);
+
+    for (Json::Value::ArrayIndex i = 0; i < request["id"].size(); ++i)
+    {
+	const Json::Value& v = request["id"][i];
+
+	if (!v.isInt())
+	    throw InvalidMethodCall();
+
+	ids.push_back(v.asInt());
+    }
+
+    auto artists = m_library->getStorage().getArtists(ids);
 
     response = Json::Value(Json::arrayValue);
     response.resize(artists.size());
@@ -205,7 +218,21 @@ void Server::libraryGetArtists(const Json::Value& request, Json::Value& response
 // =====================================================================================================================
 void Server::libraryGetAlbums(const Json::Value& request, Json::Value& response)
 {
-    auto albums = m_library->getStorage().getAlbums();
+    std::vector<int> ids;
+
+    requireType(request, "id", Json::arrayValue);
+
+    for (Json::Value::ArrayIndex i = 0; i < request["id"].size(); ++i)
+    {
+	const Json::Value& v = request["id"][i];
+
+	if (!v.isInt())
+	    throw InvalidMethodCall();
+
+	ids.push_back(v.asInt());
+    }
+
+    auto albums = m_library->getStorage().getAlbums(ids);
 
     response = Json::Value(Json::arrayValue);
     response.resize(albums.size());
@@ -217,90 +244,82 @@ void Server::libraryGetAlbums(const Json::Value& request, Json::Value& response)
 	Json::Value album(Json::objectValue);
 	album["id"] = a->m_id;
 	album["name"] = a->m_name;
-	album["artist"] = a->m_artist;
+	album["artist_id"] = a->m_artistId;
 	album["songs"] = a->m_songs;
-	album["length"] = a->m_length;
 
 	response[i].swap(album);
     }
 }
 
 // =====================================================================================================================
-void Server::libraryGetAlbumsByArtist(const Json::Value& request, Json::Value& response)
+void Server::libraryGetAlbumIdsByArtist(const Json::Value& request, Json::Value& response)
 {
     requireType(request, "artist_id", Json::intValue);
 
-    auto albums = m_library->getStorage().getAlbumsByArtist(request["artist_id"].asInt());
+    auto albumIds = m_library->getStorage().getAlbumIdsByArtist(request["artist_id"].asInt());
 
     response = Json::Value(Json::arrayValue);
-    response.resize(albums.size());
+    response.resize(albumIds.size());
 
-    for (Json::Value::ArrayIndex i = 0; i < albums.size(); ++i)
+    for (Json::Value::ArrayIndex i = 0; i < albumIds.size(); ++i)
+	response[i] = albumIds[i];
+}
+
+// =====================================================================================================================
+void Server::libraryGetFiles(const Json::Value& request, Json::Value& response)
+{
+    std::vector<int> ids;
+
+    requireType(request, "id", Json::arrayValue);
+
+    for (Json::Value::ArrayIndex i = 0; i < request["id"].size(); ++i)
     {
-	const auto& a = albums[i];
+	const Json::Value& v = request["id"][i];
 
-	Json::Value album(Json::objectValue);
-	album["id"] = a->m_id;
-	album["name"] = a->m_name;
-	album["songs"] = a->m_songs;
-	album["length"] = a->m_length;
+	if (!v.isInt())
+	    throw InvalidMethodCall();
 
-	response[i].swap(album);
+	ids.push_back(v.asInt());
     }
-}
 
-// =====================================================================================================================
-static inline void serializeFile(Json::Value& file, const zeppelin::library::File& f)
-{
-    file["id"] = f.m_id;
-    file["path"] = f.m_path;
-    file["name"] = f.m_name;
-    file["length"] = f.m_length;
-    file["title"] = f.m_title;
-    file["year"] = f.m_year;
-    file["track_index"] = f.m_trackIndex;
-    file["codec"] = f.m_codec;
-    file["artist_id"] = f.m_artistId;
-    file["album_id"] = f.m_albumId;
-    file["sampling_rate"] = f.m_samplingRate;
-}
-
-// =====================================================================================================================
-void Server::libraryGetFilesOfArtist(const Json::Value& request, Json::Value& response)
-{
-    requireType(request, "artist_id", Json::intValue);
-
-    auto files = m_library->getStorage().getFilesOfArtist(request["artist_id"].asInt());
+    auto files = m_library->getStorage().getFiles(ids);
 
     response = Json::Value(Json::arrayValue);
     response.resize(files.size());
 
     for (Json::Value::ArrayIndex i = 0; i < files.size(); ++i)
     {
+	const auto& f = files[i];
+
 	Json::Value file(Json::objectValue);
-	serializeFile(file, *files[i]);
+	file["id"] = f->m_id;
+	file["path"] = f->m_path;
+	file["name"] = f->m_name;
+	file["length"] = f->m_length;
+	file["title"] = f->m_title;
+	file["year"] = f->m_year;
+	file["track_index"] = f->m_trackIndex;
+	file["codec"] = f->m_codec;
+	file["artist_id"] = f->m_artistId;
+	file["album_id"] = f->m_albumId;
+	file["sampling_rate"] = f->m_samplingRate;
 
 	response[i].swap(file);
     }
 }
 
 // =====================================================================================================================
-void Server::libraryGetFilesOfAlbum(const Json::Value& request, Json::Value& response)
+void Server::libraryGetFileIdsOfAlbum(const Json::Value& request, Json::Value& response)
 {
     requireType(request, "album_id", Json::intValue);
 
-    auto files = m_library->getStorage().getFilesOfAlbum(request["album_id"].asInt());
+    auto fileIds = m_library->getStorage().getFileIdsOfAlbum(request["album_id"].asInt());
 
     response = Json::Value(Json::arrayValue);
-    response.resize(files.size());
+    response.resize(fileIds.size());
 
-    for (Json::Value::ArrayIndex i = 0; i < files.size(); ++i)
-    {
-	Json::Value file(Json::objectValue);
-	serializeFile(file, *files[i]);
-
-	response[i].swap(file);
-    }
+    for (Json::Value::ArrayIndex i = 0; i < fileIds.size(); ++i)
+	response[i] = fileIds[i];
 }
 
 // =====================================================================================================================
@@ -311,50 +330,32 @@ void Server::libraryListDirectory(const Json::Value& request, Json::Value& respo
     int directoryId = request["directory_id"].asInt();
 
     auto directories = m_library->getStorage().listSubdirectories(directoryId);
-    auto files = m_library->getStorage().getFilesOfDirectory(directoryId);
+    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
 
-    response = Json::Value(Json::arrayValue);
-    response.resize(directories.size() + files.size());
-
-    Json::Value::ArrayIndex i = 0;
+    Json::Value dirs(Json::arrayValue);
+    dirs.resize(directories.size());
 
     // subdirectories
-    for (const auto& d : directories)
+    for (Json::Value::ArrayIndex i = 0; i < directories.size(); ++i)
     {
 	Json::Value dir(Json::objectValue);
 	dir["type"] = "dir";
-	dir["id"] = d->m_id;
-	dir["name"] = d->m_name;
+	dir["id"] = directories[i]->m_id;
+	dir["name"] = directories[i]->m_name;
 
-	response[i++].swap(dir);
+	dirs[i].swap(dir);
     }
+
+    Json::Value files(Json::arrayValue);
+    files.resize(fileIds.size());
 
     // files
-    for (const auto& f : files)
-    {
-	Json::Value file(Json::objectValue);
-	file["type"] = "file";
-	serializeFile(file, *f);
-
-	response[i++].swap(file);
-    }
-}
-
-// =====================================================================================================================
-void Server::libraryGetMetadata(const Json::Value& request, Json::Value& response)
-{
-    requireType(request, "id", Json::intValue);
-
-    auto file = m_library->getStorage().getFile(request["id"].asInt());
+    for (Json::Value::ArrayIndex i = 0; i < fileIds.size(); ++i)
+	files[i] = fileIds[i];
 
     response = Json::Value(Json::objectValue);
-    response["artist"] = file->m_artist;
-    response["album"] = file->m_album;
-    response["title"] = file->m_title;
-    response["year"] = file->m_year;
-    response["track_index"] = file->m_trackIndex;
-    response["id"] = file->m_id;
-    response["name"] = file->m_name;
+    response["dirs"] = dirs;
+    response["files"] = files;
 }
 
 // =====================================================================================================================
@@ -378,9 +379,12 @@ void Server::playerQueueFile(const Json::Value& request, Json::Value& response)
 {
     requireType(request, "id", Json::intValue);
 
-    auto file = m_library->getStorage().getFile(request["id"].asInt());
+    auto files = m_library->getStorage().getFiles({request["id"].asInt()});
 
-    m_ctrl->queue(file);
+    if (files.empty())
+	throw InvalidMethodCall();
+
+    m_ctrl->queue(files[0]);
 }
 
 // =====================================================================================================================
@@ -391,9 +395,9 @@ void Server::playerQueueDirectory(const Json::Value& request, Json::Value& respo
     int directoryId = request["directory_id"].asInt();
 
     auto directory = m_library->getStorage().getDirectory(directoryId);
-    auto files = m_library->getStorage().getFilesOfDirectory(directoryId);
+    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
 
-    m_ctrl->queue(directory, files);
+    m_ctrl->queue(directory, m_library->getStorage().getFiles(fileIds));
 }
 
 // =====================================================================================================================
@@ -403,10 +407,13 @@ void Server::playerQueueAlbum(const Json::Value& request, Json::Value& response)
 
     int albumId = request["id"].asInt();
 
-    auto album = m_library->getStorage().getAlbum(albumId);
-    auto files = m_library->getStorage().getFilesOfAlbum(albumId);
+    auto albums = m_library->getStorage().getAlbums({albumId});
+    auto fileIds = m_library->getStorage().getFileIdsOfAlbum(albumId);
 
-    m_ctrl->queue(album, files);
+    if (albums.empty())
+	throw InvalidMethodCall();
+
+    m_ctrl->queue(albums[0], m_library->getStorage().getFiles(fileIds));
 }
 
 // =====================================================================================================================
@@ -442,7 +449,6 @@ static inline void serializeQueueItem(Json::Value& parent, const std::shared_ptr
 
 	    qi["type"] = "album";
 	    qi["id"] = album.m_id;
-	    qi["name"] = album.m_name;
 	    qi["files"] = Json::Value(Json::arrayValue);
 
 	    for (const auto& i : ai.items())
@@ -457,12 +463,6 @@ static inline void serializeQueueItem(Json::Value& parent, const std::shared_ptr
 
 	    qi["type"] = "file";
 	    qi["id"] = file->m_id;
-	    qi["path"] = file->m_path;
-	    qi["name"] = file->m_name;
-	    qi["title"] = file->m_title;
-	    qi["length"] = file->m_length;
-	    qi["codec"] = file->m_codec;
-	    qi["sampling_rate"] = file->m_samplingRate;
 
 	    break;
 	}
