@@ -304,7 +304,8 @@ void Server::libraryGetFiles(const Json::Value& request, Json::Value& response)
 	file["year"] = f->m_year;
 	file["track_index"] = f->m_trackIndex;
 	file["codec"] = f->m_codec;
-	file["sampling_rate"] = f->m_samplingRate;
+	file["sample_rate"] = f->m_sampleRate;
+	file["sample_size"] = f->m_sampleSize;
 
 	response[i].swap(file);
     }
