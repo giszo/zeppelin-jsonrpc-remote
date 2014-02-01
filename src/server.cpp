@@ -354,6 +354,7 @@ void Server::libraryGetDirectories(const Json::Value& request, Json::Value& resp
 	Json::Value dir(Json::objectValue);
 	dir["id"] = d->m_id;
 	dir["name"] = d->m_name;
+	dir["parent_id"] = d->m_parentId;
 
 	response[i].swap(dir);
     }
@@ -472,7 +473,7 @@ static inline void serializeQueueItem(Json::Value& parent, const std::shared_ptr
 	    const zeppelin::player::Directory& di = static_cast<const zeppelin::player::Directory&>(*item);
 	    const zeppelin::library::Directory& directory = di.directory();
 
-	    qi["type"] = "dir";
+	    qi["type"] = "directory";
 	    qi["id"] = directory.m_id;
 	    qi["files"] = Json::Value(Json::arrayValue);
 
