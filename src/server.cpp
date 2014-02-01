@@ -35,6 +35,7 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
     REGISTER_RPC_METHOD("library_get_file_ids_of_album", libraryGetFileIdsOfAlbum);
 
     // library - directories
+    REGISTER_RPC_METHOD("library_get_directories", libraryGetDirectories);
     REGISTER_RPC_METHOD("library_list_directory", libraryListDirectory);
 
     // library - metadata
@@ -295,13 +296,14 @@ void Server::libraryGetFiles(const Json::Value& request, Json::Value& response)
 	file["id"] = f->m_id;
 	file["path"] = f->m_path;
 	file["name"] = f->m_name;
+	file["directory_id"] = f->m_directoryId;
+	file["artist_id"] = f->m_artistId;
+	file["album_id"] = f->m_albumId;
 	file["length"] = f->m_length;
 	file["title"] = f->m_title;
 	file["year"] = f->m_year;
 	file["track_index"] = f->m_trackIndex;
 	file["codec"] = f->m_codec;
-	file["artist_id"] = f->m_artistId;
-	file["album_id"] = f->m_albumId;
 	file["sampling_rate"] = f->m_samplingRate;
 
 	response[i].swap(file);
@@ -320,6 +322,40 @@ void Server::libraryGetFileIdsOfAlbum(const Json::Value& request, Json::Value& r
 
     for (Json::Value::ArrayIndex i = 0; i < fileIds.size(); ++i)
 	response[i] = fileIds[i];
+}
+
+// =====================================================================================================================
+void Server::libraryGetDirectories(const Json::Value& request, Json::Value& response)
+{
+    std::vector<int> ids;
+
+    requireType(request, "id", Json::arrayValue);
+
+    for (Json::Value::ArrayIndex i = 0; i < request["id"].size(); ++i)
+    {
+	const Json::Value& v = request["id"][i];
+
+	if (!v.isInt())
+	    throw InvalidMethodCall();
+
+	ids.push_back(v.asInt());
+    }
+
+    auto directories = m_library->getStorage().getDirectories(ids);
+
+    response = Json::Value(Json::arrayValue);
+    response.resize(directories.size());
+
+    for (Json::Value::ArrayIndex i = 0; i < directories.size(); ++i)
+    {
+	const auto& d = directories[i];
+
+	Json::Value dir(Json::objectValue);
+	dir["id"] = d->m_id;
+	dir["name"] = d->m_name;
+
+	response[i].swap(dir);
+    }
 }
 
 // =====================================================================================================================
@@ -394,10 +430,14 @@ void Server::playerQueueDirectory(const Json::Value& request, Json::Value& respo
 
     int directoryId = request["directory_id"].asInt();
 
-    auto directory = m_library->getStorage().getDirectory(directoryId);
+    auto directories = m_library->getStorage().getDirectories({directoryId});
+
+    if (directories.empty())
+	throw InvalidMethodCall();
+
     auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
 
-    m_ctrl->queue(directory, m_library->getStorage().getFiles(fileIds));
+    m_ctrl->queue(directories[0], m_library->getStorage().getFiles(fileIds));
 }
 
 // =====================================================================================================================

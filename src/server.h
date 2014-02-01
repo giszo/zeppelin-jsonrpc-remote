@@ -50,6 +50,7 @@ class Server : public zeppelin::plugin::Plugin
 	void libraryGetFileIdsOfAlbum(const Json::Value& request, Json::Value& response);
 
 	// library - directories
+	void libraryGetDirectories(const Json::Value& request, Json::Value& response);
 	void libraryListDirectory(const Json::Value& request, Json::Value& response);
 
 	// library - metadata
