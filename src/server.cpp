@@ -473,7 +473,6 @@ static inline void serializeQueueItem(Json::Value& parent, const std::shared_ptr
 
 	    qi["type"] = "dir";
 	    qi["id"] = directory.m_id;
-	    qi["name"] = directory.m_name;
 	    qi["files"] = Json::Value(Json::arrayValue);
 
 	    for (const auto& i : di.items())
