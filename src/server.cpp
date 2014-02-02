@@ -515,7 +515,7 @@ void Server::playerQueueFile(const Json::Value& request, Json::Value& response)
     if (files.empty())
 	throw InvalidMethodCall();
 
-    m_ctrl->queue(files[0]);
+    m_ctrl->queue(std::make_shared<zeppelin::player::File>(files[0]));
 }
 
 // =====================================================================================================================
@@ -532,7 +532,8 @@ void Server::playerQueueDirectory(const Json::Value& request, Json::Value& respo
 
     auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
 
-    m_ctrl->queue(directories[0], m_library->getStorage().getFiles(fileIds));
+    m_ctrl->queue(std::make_shared<zeppelin::player::Directory>(directories[0],
+								m_library->getStorage().getFiles(fileIds)));
 }
 
 // =====================================================================================================================
@@ -548,7 +549,8 @@ void Server::playerQueueAlbum(const Json::Value& request, Json::Value& response)
     if (albums.empty())
 	throw InvalidMethodCall();
 
-    m_ctrl->queue(albums[0], m_library->getStorage().getFiles(fileIds));
+    m_ctrl->queue(std::make_shared<zeppelin::player::Album>(albums[0],
+							    m_library->getStorage().getFiles(fileIds)));
 }
 
 // =====================================================================================================================
