@@ -67,6 +67,7 @@ class Server : public zeppelin::plugin::Plugin
 	void playerQueueFile(const Json::Value& request, Json::Value& response);
 	void playerQueueDirectory(const Json::Value& request, Json::Value& response);
 	void playerQueueAlbum(const Json::Value& request, Json::Value& response);
+	void playerQueuePlaylist(const Json::Value& request, Json::Value& response);
 	void playerQueueGet(const Json::Value& request, Json::Value& response);
 	void playerQueueRemove(const Json::Value& request, Json::Value& response);
 	void playerQueueRemoveAll(const Json::Value& request, Json::Value& response);

@@ -52,6 +52,7 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
     REGISTER_RPC_METHOD("player_queue_file", playerQueueFile);
     REGISTER_RPC_METHOD("player_queue_directory", playerQueueDirectory);
     REGISTER_RPC_METHOD("player_queue_album", playerQueueAlbum);
+    REGISTER_RPC_METHOD("player_queue_playlist", playerQueuePlaylist);
     REGISTER_RPC_METHOD("player_queue_get", playerQueueGet);
     REGISTER_RPC_METHOD("player_queue_remove", playerQueueRemove);
     REGISTER_RPC_METHOD("player_queue_remove_all", playerQueueRemoveAll);
@@ -551,6 +552,56 @@ void Server::playerQueueAlbum(const Json::Value& request, Json::Value& response)
 
     m_ctrl->queue(std::make_shared<zeppelin::player::Album>(albums[0],
 							    m_library->getStorage().getFiles(fileIds)));
+}
+
+// =====================================================================================================================
+void Server::playerQueuePlaylist(const Json::Value& request, Json::Value& response)
+{
+    requireType(request, "id", Json::intValue);
+
+    auto playlists = m_library->getStorage().getPlaylists({request["id"].asInt()});
+
+    if (playlists.empty())
+	throw InvalidMethodCall();
+
+    std::shared_ptr<zeppelin::player::Playlist> p = std::make_shared<zeppelin::player::Playlist>(playlists[0]->m_id);
+
+    for (const auto& item : playlists[0]->m_items)
+    {
+	if (item.m_type == "file")
+	{
+	    auto files = m_library->getStorage().getFiles({item.m_itemId});
+
+	    if (!files.empty())
+		p->add(std::make_shared<zeppelin::player::File>(files[0]));
+	}
+	else if (item.m_type == "directory")
+	{
+	    auto directories = m_library->getStorage().getDirectories({item.m_itemId});
+	    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(item.m_itemId);
+
+	    if (!directories.empty())
+	    {
+		p->add(std::make_shared<zeppelin::player::Directory>(directories[0],
+								     m_library->getStorage().getFiles(fileIds)));
+	    }
+	}
+	else if (item.m_type == "album")
+	{
+	    auto albums = m_library->getStorage().getAlbums({item.m_itemId});
+	    auto fileIds = m_library->getStorage().getFileIdsOfAlbum(item.m_itemId);
+
+	    if (!albums.empty())
+	    {
+		p->add(std::make_shared<zeppelin::player::Album>(albums[0],
+								 m_library->getStorage().getFiles(fileIds)));
+	    }
+	}
+	else
+	    LOG("jsonrpc-remote: invalid playlist item: " << item.m_type);
+    }
+
+    m_ctrl->queue(p);
 }
 
 // =====================================================================================================================
