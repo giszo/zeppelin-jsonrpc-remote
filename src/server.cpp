@@ -41,6 +41,13 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
     // library - metadata
     REGISTER_RPC_METHOD("library_update_metadata", libraryUpdateMetadata);
 
+    // libray - playlists
+    REGISTER_RPC_METHOD("library_create_playlist", libraryCreatePlaylist);
+    REGISTER_RPC_METHOD("library_delete_playlist", libraryDeletePlaylist);
+    REGISTER_RPC_METHOD("library_add_playlist_item", libraryAddPlaylistItem);
+    REGISTER_RPC_METHOD("library_delete_playlist_item", libraryDeletePlaylistItem);
+    REGISTER_RPC_METHOD("library_get_playlists", libraryGetPlaylists);
+
     // player queue
     REGISTER_RPC_METHOD("player_queue_file", playerQueueFile);
     REGISTER_RPC_METHOD("player_queue_directory", playerQueueDirectory);
@@ -410,6 +417,92 @@ void Server::libraryUpdateMetadata(const Json::Value& request, Json::Value& resp
     file.m_trackIndex = request["track_index"].asInt();
 
     m_library->getStorage().updateFileMetadata(file);
+}
+
+// =====================================================================================================================
+void Server::libraryCreatePlaylist(const Json::Value& request, Json::Value& response)
+{
+    requireType(request, "name", Json::stringValue);
+
+    response = Json::Value(Json::intValue);
+    response = m_library->getStorage().createPlaylist(request["name"].asString());
+}
+
+// =====================================================================================================================
+void Server::libraryDeletePlaylist(const Json::Value& request, Json::Value& response)
+{
+    requireType(request, "id", Json::intValue);
+
+    m_library->getStorage().deletePlaylist(request["id"].asInt());
+}
+
+// =====================================================================================================================
+void Server::libraryAddPlaylistItem(const Json::Value& request, Json::Value& response)
+{
+    requireType(request, "id", Json::intValue);
+    requireType(request, "type", Json::stringValue);
+    requireType(request, "item_id", Json::intValue);
+
+    response = Json::Value(Json::intValue);
+    response = m_library->getStorage().addPlaylistItem(request["id"].asInt(),
+						       request["type"].asString(),
+						       request["item_id"].asInt());
+}
+
+// =====================================================================================================================
+void Server::libraryDeletePlaylistItem(const Json::Value& request, Json::Value& response)
+{
+    requireType(request, "id", Json::intValue);
+
+    m_library->getStorage().deletePlaylistItem(request["id"].asInt());
+}
+
+// =====================================================================================================================
+void Server::libraryGetPlaylists(const Json::Value& request, Json::Value& response)
+{
+    std::vector<int> ids;
+
+    requireType(request, "id", Json::arrayValue);
+
+    for (Json::Value::ArrayIndex i = 0; i < request["id"].size(); ++i)
+    {
+	const Json::Value& v = request["id"][i];
+
+	if (!v.isInt())
+	    throw InvalidMethodCall();
+
+	ids.push_back(v.asInt());
+    }
+
+    auto playlists = m_library->getStorage().getPlaylists(ids);
+
+    response = Json::Value(Json::arrayValue);
+    response.resize(playlists.size());
+
+    for (Json::Value::ArrayIndex i = 0; i < playlists.size(); ++i)
+    {
+	const auto& p = playlists[i];
+
+	Json::Value playlist(Json::objectValue);
+	playlist["id"] = p->m_id;
+	playlist["name"] = p->m_name;
+
+	playlist["items"] = Json::Value(Json::arrayValue);
+	playlist["items"].resize(p->m_items.size());
+
+	for (Json::Value::ArrayIndex j = 0; j < p->m_items.size(); ++j)
+	{
+	    const auto& pi = p->m_items[j];
+
+	    Json::Value item(Json::objectValue);
+	    item["id"] = pi.m_id;
+	    item["type"] = pi.m_type;
+
+	    playlist["items"][j].swap(item);
+	}
+
+	response[i].swap(playlist);
+    }
 }
 
 // =====================================================================================================================

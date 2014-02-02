@@ -56,6 +56,13 @@ class Server : public zeppelin::plugin::Plugin
 	// library - metadata
 	void libraryUpdateMetadata(const Json::Value& request, Json::Value& response);
 
+	// library - playlists
+	void libraryCreatePlaylist(const Json::Value& request, Json::Value& response);
+	void libraryDeletePlaylist(const Json::Value& request, Json::Value& response);
+	void libraryAddPlaylistItem(const Json::Value& request, Json::Value& response);
+	void libraryDeletePlaylistItem(const Json::Value& request, Json::Value& response);
+	void libraryGetPlaylists(const Json::Value& request, Json::Value& response);
+
 	// player - queue
 	void playerQueueFile(const Json::Value& request, Json::Value& response);
 	void playerQueueDirectory(const Json::Value& request, Json::Value& response);
