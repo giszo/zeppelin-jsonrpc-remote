@@ -428,9 +428,9 @@ void Server::playerQueueFile(const Json::Value& request, Json::Value& response)
 // =====================================================================================================================
 void Server::playerQueueDirectory(const Json::Value& request, Json::Value& response)
 {
-    requireType(request, "directory_id", Json::intValue);
+    requireType(request, "id", Json::intValue);
 
-    int directoryId = request["directory_id"].asInt();
+    int directoryId = request["id"].asInt();
 
     auto directories = m_library->getStorage().getDirectories({directoryId});
 
