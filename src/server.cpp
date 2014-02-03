@@ -533,8 +533,11 @@ void Server::playerQueueDirectory(const Json::Value& request, Json::Value& respo
 
     auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
 
-    m_ctrl->queue(std::make_shared<zeppelin::player::Directory>(directories[0],
-								m_library->getStorage().getFiles(fileIds)));
+    m_ctrl->queue(std::make_shared<zeppelin::player::Directory>(
+	directories[0],
+	fileIds.empty() ?
+	    std::vector<std::shared_ptr<zeppelin::library::File>>() :
+	    m_library->getStorage().getFiles(fileIds)));
 }
 
 // =====================================================================================================================
@@ -550,8 +553,11 @@ void Server::playerQueueAlbum(const Json::Value& request, Json::Value& response)
     if (albums.empty())
 	throw InvalidMethodCall();
 
-    m_ctrl->queue(std::make_shared<zeppelin::player::Album>(albums[0],
-							    m_library->getStorage().getFiles(fileIds)));
+    m_ctrl->queue(std::make_shared<zeppelin::player::Album>(
+	albums[0],
+	fileIds.empty() ?
+	    std::vector<std::shared_ptr<zeppelin::library::File>>() :
+	    m_library->getStorage().getFiles(fileIds)));
 }
 
 // =====================================================================================================================
@@ -582,8 +588,11 @@ void Server::playerQueuePlaylist(const Json::Value& request, Json::Value& respon
 
 	    if (!directories.empty())
 	    {
-		p->add(std::make_shared<zeppelin::player::Directory>(directories[0],
-								     m_library->getStorage().getFiles(fileIds)));
+		p->add(std::make_shared<zeppelin::player::Directory>(
+		    directories[0],
+		    fileIds.empty() ?
+		        std::vector<std::shared_ptr<zeppelin::library::File>>() :
+		        m_library->getStorage().getFiles(fileIds)));
 	    }
 	}
 	else if (item.m_type == "album")
@@ -593,8 +602,11 @@ void Server::playerQueuePlaylist(const Json::Value& request, Json::Value& respon
 
 	    if (!albums.empty())
 	    {
-		p->add(std::make_shared<zeppelin::player::Album>(albums[0],
-								 m_library->getStorage().getFiles(fileIds)));
+		p->add(std::make_shared<zeppelin::player::Album>(
+		    albums[0],
+		    fileIds.empty() ?
+		        std::vector<std::shared_ptr<zeppelin::library::File>>() :
+		        m_library->getStorage().getFiles(fileIds)));
 	    }
 	}
 	else
