@@ -612,7 +612,18 @@ static inline void serializeQueueItem(Json::Value& parent, const std::shared_ptr
     switch (item->type())
     {
 	case zeppelin::player::QueueItem::PLAYLIST :
+	{
+	    const zeppelin::player::Playlist& pl = static_cast<const zeppelin::player::Playlist&>(*item);
+
+	    qi["type"] = "playlist";
+	    qi["id"] = pl.getId();
+	    qi["items"] = Json::Value(Json::arrayValue);
+
+	    for (const auto& i : pl.items())
+		serializeQueueItem(qi["items"], i);
+
 	    break;
+	}
 
 	case zeppelin::player::QueueItem::DIRECTORY :
 	{
