@@ -13,6 +13,22 @@
 #define REGISTER_RPC_METHOD(name, function) \
     m_rpcMethods[name] = std::bind(&Server::function, this, std::placeholders::_1, std::placeholders::_2)
 
+struct FilenameComparator
+{
+    bool operator()(const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
+    {
+	return f1->m_name < f2->m_name;
+    }
+};
+
+struct TrackIndexComparator
+{
+    bool operator()(const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
+    {
+	return f1->m_trackIndex < f2->m_trackIndex;
+    }
+};
+
 // =====================================================================================================================
 Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
 	       const std::shared_ptr<zeppelin::player::Controller>& ctrl)
@@ -532,12 +548,14 @@ void Server::playerQueueDirectory(const Json::Value& request, Json::Value& respo
 	throw InvalidMethodCall();
 
     auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
+    auto files = m_library->getStorage().getFiles(fileIds);
+    std::sort(files.begin(), files.end(), FilenameComparator());
 
     m_ctrl->queue(std::make_shared<zeppelin::player::Directory>(
 	directories[0],
 	fileIds.empty() ?
 	    std::vector<std::shared_ptr<zeppelin::library::File>>() :
-	    m_library->getStorage().getFiles(fileIds)));
+	    files));
 }
 
 // =====================================================================================================================
@@ -548,16 +566,19 @@ void Server::playerQueueAlbum(const Json::Value& request, Json::Value& response)
     int albumId = request["id"].asInt();
 
     auto albums = m_library->getStorage().getAlbums({albumId});
-    auto fileIds = m_library->getStorage().getFileIdsOfAlbum(albumId);
 
     if (albums.empty())
 	throw InvalidMethodCall();
+
+    auto fileIds = m_library->getStorage().getFileIdsOfAlbum(albumId);
+    auto files = m_library->getStorage().getFiles(fileIds);
+    std::sort(files.begin(), files.end(), TrackIndexComparator());
 
     m_ctrl->queue(std::make_shared<zeppelin::player::Album>(
 	albums[0],
 	fileIds.empty() ?
 	    std::vector<std::shared_ptr<zeppelin::library::File>>() :
-	    m_library->getStorage().getFiles(fileIds)));
+	    files));
 }
 
 // =====================================================================================================================
@@ -584,29 +605,35 @@ void Server::playerQueuePlaylist(const Json::Value& request, Json::Value& respon
 	else if (item.m_type == "directory")
 	{
 	    auto directories = m_library->getStorage().getDirectories({item.m_itemId});
-	    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(item.m_itemId);
 
 	    if (!directories.empty())
 	    {
+		auto fileIds = m_library->getStorage().getFileIdsOfDirectory(item.m_itemId);
+		auto files = m_library->getStorage().getFiles(fileIds);
+		std::sort(files.begin(), files.end(), FilenameComparator());
+
 		p->add(std::make_shared<zeppelin::player::Directory>(
 		    directories[0],
 		    fileIds.empty() ?
 		        std::vector<std::shared_ptr<zeppelin::library::File>>() :
-		        m_library->getStorage().getFiles(fileIds)));
+		        files));
 	    }
 	}
 	else if (item.m_type == "album")
 	{
 	    auto albums = m_library->getStorage().getAlbums({item.m_itemId});
-	    auto fileIds = m_library->getStorage().getFileIdsOfAlbum(item.m_itemId);
 
 	    if (!albums.empty())
 	    {
+		auto fileIds = m_library->getStorage().getFileIdsOfAlbum(item.m_itemId);
+		auto files = m_library->getStorage().getFiles(fileIds);
+		std::sort(files.begin(), files.end(), TrackIndexComparator());
+
 		p->add(std::make_shared<zeppelin::player::Album>(
 		    albums[0],
 		    fileIds.empty() ?
 		        std::vector<std::shared_ptr<zeppelin::library::File>>() :
-		        m_library->getStorage().getFiles(fileIds)));
+		        files));
 	    }
 	}
 	else
