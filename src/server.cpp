@@ -514,6 +514,7 @@ void Server::libraryGetPlaylists(const Json::Value& request, Json::Value& respon
 	    Json::Value item(Json::objectValue);
 	    item["id"] = pi.m_id;
 	    item["type"] = pi.m_type;
+	    item["item_id"] = pi.m_itemId;
 
 	    playlist["items"][j].swap(item);
 	}
