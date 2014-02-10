@@ -52,7 +52,6 @@ class Server : public zeppelin::plugin::Plugin
 
 	// library - directories
 	void libraryGetDirectories(const Json::Value& request, Json::Value& response);
-	void libraryListDirectory(const Json::Value& request, Json::Value& response);
 
 	// library - metadata
 	void libraryUpdateMetadata(const Json::Value& request, Json::Value& response);

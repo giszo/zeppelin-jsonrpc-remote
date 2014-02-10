@@ -35,7 +35,6 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
 
     // library - directories
     REGISTER_RPC_METHOD("library_get_directories", libraryGetDirectories);
-    REGISTER_RPC_METHOD("library_list_directory", libraryListDirectory);
 
     // library - metadata
     REGISTER_RPC_METHOD("library_update_metadata", libraryUpdateMetadata);
@@ -365,42 +364,6 @@ void Server::libraryGetDirectories(const Json::Value& request, Json::Value& resp
 
 	response[i].swap(dir);
     }
-}
-
-// =====================================================================================================================
-void Server::libraryListDirectory(const Json::Value& request, Json::Value& response)
-{
-    requireType(request, "directory_id", Json::intValue);
-
-    int directoryId = request["directory_id"].asInt();
-
-    auto directories = m_library->getStorage().listSubdirectories(directoryId);
-    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
-
-    Json::Value dirs(Json::arrayValue);
-    dirs.resize(directories.size());
-
-    // subdirectories
-    for (Json::Value::ArrayIndex i = 0; i < directories.size(); ++i)
-    {
-	Json::Value dir(Json::objectValue);
-	dir["type"] = "dir";
-	dir["id"] = directories[i]->m_id;
-	dir["name"] = directories[i]->m_name;
-
-	dirs[i].swap(dir);
-    }
-
-    Json::Value files(Json::arrayValue);
-    files.resize(fileIds.size());
-
-    // files
-    for (Json::Value::ArrayIndex i = 0; i < fileIds.size(); ++i)
-	files[i] = fileIds[i];
-
-    response = Json::Value(Json::objectValue);
-    response["dirs"] = dirs;
-    response["files"] = files;
 }
 
 // =====================================================================================================================
