@@ -769,21 +769,45 @@ std::shared_ptr<zeppelin::player::Directory> Server::createDirectory(int directo
     if (directories.empty())
 	throw InvalidMethodCall();
 
-    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
-    auto files = m_library->getStorage().getFiles(fileIds);
-
-    std::sort(
-	files.begin(),
-	files.end(),
-	[](const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
-	{
-	    return f1->m_name < f2->m_name;
-	});
-
     auto dir = std::make_shared<zeppelin::player::Directory>(directories[0]);
 
-    for (const auto& f : files)
-	dir->add(std::make_shared<zeppelin::player::File>(f));
+    // subdirectories
+    auto dirIds = m_library->getStorage().getSubdirectoryIdsOfDirectory(directoryId);
+
+    if (!dirIds.empty())
+    {
+	auto dirs = m_library->getStorage().getDirectories(dirIds);
+
+	std::sort(
+	    dirs.begin(),
+	    dirs.end(),
+	    [](const std::shared_ptr<zeppelin::library::Directory>& d1, const std::shared_ptr<zeppelin::library::Directory>& d2)
+	    {
+		return d1->m_name < d2->m_name;
+	    });
+
+	for (const auto& d : dirs)
+	    dir->add(createDirectory(d->m_id));
+    }
+
+    // files
+    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
+
+    if (!fileIds.empty())
+    {
+	auto files = m_library->getStorage().getFiles(fileIds);
+
+	std::sort(
+	    files.begin(),
+	    files.end(),
+	    [](const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
+	    {
+		return f1->m_name < f2->m_name;
+	    });
+
+	for (const auto& f : files)
+	    dir->add(std::make_shared<zeppelin::player::File>(f));
+    }
 
     return dir;
 }
