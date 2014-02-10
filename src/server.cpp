@@ -3,7 +3,6 @@
 #include <zeppelin/logger.h>
 #include <zeppelin/plugin/pluginmanager.h>
 #include <zeppelin/library/storage.h>
-#include <zeppelin/player/queue.h>
 
 #include <jsoncpp/json/reader.h>
 #include <jsoncpp/json/writer.h>
@@ -12,22 +11,6 @@
 
 #define REGISTER_RPC_METHOD(name, function) \
     m_rpcMethods[name] = std::bind(&Server::function, this, std::placeholders::_1, std::placeholders::_2)
-
-struct FilenameComparator
-{
-    bool operator()(const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
-    {
-	return f1->m_name < f2->m_name;
-    }
-};
-
-struct TrackIndexComparator
-{
-    bool operator()(const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
-    {
-	return f1->m_trackIndex < f2->m_trackIndex;
-    }
-};
 
 // =====================================================================================================================
 Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
@@ -541,22 +524,7 @@ void Server::playerQueueDirectory(const Json::Value& request, Json::Value& respo
 {
     requireType(request, "id", Json::intValue);
 
-    int directoryId = request["id"].asInt();
-
-    auto directories = m_library->getStorage().getDirectories({directoryId});
-
-    if (directories.empty())
-	throw InvalidMethodCall();
-
-    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
-    auto files = m_library->getStorage().getFiles(fileIds);
-    std::sort(files.begin(), files.end(), FilenameComparator());
-
-    m_ctrl->queue(std::make_shared<zeppelin::player::Directory>(
-	directories[0],
-	fileIds.empty() ?
-	    std::vector<std::shared_ptr<zeppelin::library::File>>() :
-	    files));
+    m_ctrl->queue(createDirectory(request["id"].asInt()));
 }
 
 // =====================================================================================================================
@@ -564,22 +532,7 @@ void Server::playerQueueAlbum(const Json::Value& request, Json::Value& response)
 {
     requireType(request, "id", Json::intValue);
 
-    int albumId = request["id"].asInt();
-
-    auto albums = m_library->getStorage().getAlbums({albumId});
-
-    if (albums.empty())
-	throw InvalidMethodCall();
-
-    auto fileIds = m_library->getStorage().getFileIdsOfAlbum(albumId);
-    auto files = m_library->getStorage().getFiles(fileIds);
-    std::sort(files.begin(), files.end(), TrackIndexComparator());
-
-    m_ctrl->queue(std::make_shared<zeppelin::player::Album>(
-	albums[0],
-	fileIds.empty() ?
-	    std::vector<std::shared_ptr<zeppelin::library::File>>() :
-	    files));
+    m_ctrl->queue(createAlbum(request["id"].asInt()));
 }
 
 // =====================================================================================================================
@@ -604,39 +557,9 @@ void Server::playerQueuePlaylist(const Json::Value& request, Json::Value& respon
 		p->add(std::make_shared<zeppelin::player::File>(files[0]));
 	}
 	else if (item.m_type == "directory")
-	{
-	    auto directories = m_library->getStorage().getDirectories({item.m_itemId});
-
-	    if (!directories.empty())
-	    {
-		auto fileIds = m_library->getStorage().getFileIdsOfDirectory(item.m_itemId);
-		auto files = m_library->getStorage().getFiles(fileIds);
-		std::sort(files.begin(), files.end(), FilenameComparator());
-
-		p->add(std::make_shared<zeppelin::player::Directory>(
-		    directories[0],
-		    fileIds.empty() ?
-		        std::vector<std::shared_ptr<zeppelin::library::File>>() :
-		        files));
-	    }
-	}
+	    p->add(createDirectory(item.m_itemId));
 	else if (item.m_type == "album")
-	{
-	    auto albums = m_library->getStorage().getAlbums({item.m_itemId});
-
-	    if (!albums.empty())
-	    {
-		auto fileIds = m_library->getStorage().getFileIdsOfAlbum(item.m_itemId);
-		auto files = m_library->getStorage().getFiles(fileIds);
-		std::sort(files.begin(), files.end(), TrackIndexComparator());
-
-		p->add(std::make_shared<zeppelin::player::Album>(
-		    albums[0],
-		    fileIds.empty() ?
-		        std::vector<std::shared_ptr<zeppelin::library::File>>() :
-		        files));
-	    }
-	}
+	    p->add(createAlbum(item.m_itemId));
 	else
 	    LOG("jsonrpc-remote: invalid playlist item: " << item.m_type);
     }
@@ -846,4 +769,58 @@ void Server::requireType(const Json::Value& request, const std::string& key, Jso
 {
     if (!request.isMember(key) || request[key].type() != type)
 	throw InvalidMethodCall();
+}
+
+// =====================================================================================================================
+std::shared_ptr<zeppelin::player::Album> Server::createAlbum(int albumId)
+{
+    auto albums = m_library->getStorage().getAlbums({albumId});
+
+    if (albums.empty())
+	throw InvalidMethodCall();
+
+    auto fileIds = m_library->getStorage().getFileIdsOfAlbum(albumId);
+    auto files = m_library->getStorage().getFiles(fileIds);
+
+    std::sort(
+	files.begin(),
+	files.end(),
+	[](const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
+	{
+	    return (f1->m_trackIndex < f2->m_trackIndex) ||
+		((f1->m_trackIndex == f2->m_trackIndex) && (f1->m_name < f2->m_name));
+	});
+
+    return std::make_shared<zeppelin::player::Album>(
+	albums[0],
+	fileIds.empty() ?
+	    std::vector<std::shared_ptr<zeppelin::library::File>>() :
+	    files);
+}
+
+// =====================================================================================================================
+std::shared_ptr<zeppelin::player::Directory> Server::createDirectory(int directoryId)
+{
+    auto directories = m_library->getStorage().getDirectories({directoryId});
+
+    if (directories.empty())
+	throw InvalidMethodCall();
+
+    auto fileIds = m_library->getStorage().getFileIdsOfDirectory(directoryId);
+    auto files = m_library->getStorage().getFiles(fileIds);
+
+    std::sort(
+	files.begin(),
+	files.end(),
+	[](const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
+	{
+	    return f1->m_name < f2->m_name;
+	});
+
+    auto dir = std::make_shared<zeppelin::player::Directory>(directories[0]);
+
+    for (const auto& f : files)
+	dir->add(std::make_shared<zeppelin::player::File>(f));
+
+    return dir;
 }

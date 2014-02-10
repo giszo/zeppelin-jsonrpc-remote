@@ -6,6 +6,7 @@
 #include <zeppelin/plugin/plugin.h>
 #include <zeppelin/library/musiclibrary.h>
 #include <zeppelin/player/controller.h>
+#include <zeppelin/player/queue.h>
 
 #include <jsoncpp/json/value.h>
 
@@ -86,6 +87,9 @@ class Server : public zeppelin::plugin::Plugin
 	void playerSetVolume(const Json::Value& request, Json::Value& response);
 
 	void requireType(const Json::Value& request, const std::string& key, Json::ValueType type);
+
+	std::shared_ptr<zeppelin::player::Album> createAlbum(int albumId);
+	std::shared_ptr<zeppelin::player::Directory> createDirectory(int directoryId);
 
     private:
 	std::shared_ptr<zeppelin::library::MusicLibrary> m_library;
