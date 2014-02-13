@@ -305,13 +305,13 @@ void Server::libraryGetFiles(const Json::Value& request, Json::Value& response)
 	file["directory_id"] = f->m_directoryId;
 	file["artist_id"] = f->m_artistId;
 	file["album_id"] = f->m_albumId;
-	file["length"] = f->m_length;
-	file["title"] = f->m_title;
-	file["year"] = f->m_year;
-	file["track_index"] = f->m_trackIndex;
-	file["codec"] = f->m_codec;
-	file["sample_rate"] = f->m_sampleRate;
-	file["sample_size"] = f->m_sampleSize;
+	file["length"] = f->m_metadata->getLength();
+	file["title"] = f->m_metadata->getTitle();
+	file["year"] = f->m_metadata->getYear();
+	file["track_index"] = f->m_metadata->getTrackIndex();
+	file["codec"] = f->m_metadata->getCodec();
+	file["sample_rate"] = f->m_metadata->getSampleRate();
+	file["sample_size"] = f->m_metadata->getSampleSize();
 
 	response[i].swap(file);
     }
@@ -372,12 +372,13 @@ void Server::libraryUpdateMetadata(const Json::Value& request, Json::Value& resp
     requireType(request, "id", Json::intValue);
 
     zeppelin::library::File file(request["id"].asInt());
+    file.m_metadata.reset(new zeppelin::library::Metadata(""));
 
-    file.m_artist = request["artist"].asString();
-    file.m_album = request["album"].asString();
-    file.m_title = request["title"].asString();
-    file.m_year = request["year"].asInt();
-    file.m_trackIndex = request["track_index"].asInt();
+    file.m_metadata->setArtist(request["artist"].asString());
+    file.m_metadata->setAlbum(request["album"].asString());
+    file.m_metadata->setTitle(request["title"].asString());
+    file.m_metadata->setYear(request["year"].asInt());
+    file.m_metadata->setTrackIndex(request["track_index"].asInt());
 
     m_library->getStorage().updateFileMetadata(file);
 }
@@ -750,8 +751,8 @@ std::shared_ptr<zeppelin::player::Album> Server::createAlbum(int albumId)
 	files.end(),
 	[](const std::shared_ptr<zeppelin::library::File>& f1, const std::shared_ptr<zeppelin::library::File>& f2)
 	{
-	    return (f1->m_trackIndex < f2->m_trackIndex) ||
-		((f1->m_trackIndex == f2->m_trackIndex) && (f1->m_name < f2->m_name));
+	    return (f1->m_metadata->getTrackIndex() < f2->m_metadata->getTrackIndex()) ||
+		((f1->m_metadata->getTrackIndex() == f2->m_metadata->getTrackIndex()) && (f1->m_name < f2->m_name));
 	});
 
     return std::make_shared<zeppelin::player::Album>(
