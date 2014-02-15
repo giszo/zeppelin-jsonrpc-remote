@@ -8,9 +8,18 @@
 #include <jsoncpp/json/writer.h>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/archive/iterators/ostream_iterator.hpp>
+
+#include <sstream>
 
 #define REGISTER_RPC_METHOD(name, function) \
     m_rpcMethods[name] = std::bind(&Server::function, this, std::placeholders::_1, std::placeholders::_2)
+
+using namespace boost::archive::iterators;
+
+typedef base64_from_binary<transform_width<const char*, 6, 8>> Base64;
 
 // =====================================================================================================================
 Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
@@ -28,6 +37,7 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
     // library - albums
     REGISTER_RPC_METHOD("library_get_album_ids_by_artist", libraryGetAlbumIdsByArtist);
     REGISTER_RPC_METHOD("library_get_albums", libraryGetAlbums);
+    REGISTER_RPC_METHOD("library_get_pictures_of_albums", libraryGetPicturesOfAlbums);
 
     // library - files
     REGISTER_RPC_METHOD("library_get_files", libraryGetFiles);
@@ -255,6 +265,66 @@ void Server::libraryGetAlbums(const Json::Value& request, Json::Value& response)
 	album["songs"] = a->m_songs;
 
 	response[i].swap(album);
+    }
+}
+
+// =====================================================================================================================
+void Server::libraryGetPicturesOfAlbums(const Json::Value& request, Json::Value& response)
+{
+    std::vector<int> ids;
+
+    requireType(request, "id", Json::arrayValue);
+
+    for (Json::Value::ArrayIndex i = 0; i < request["id"].size(); ++i)
+    {
+	const Json::Value& v = request["id"][i];
+
+	if (!v.isInt())
+	    throw InvalidMethodCall();
+
+	ids.push_back(v.asInt());
+    }
+
+    auto result = m_library->getStorage().getPicturesOfAlbums(ids);
+
+    response = Json::Value(Json::objectValue);
+
+    for (const auto& it : result)
+    {
+	Json::Value pictures(Json::arrayValue);
+	pictures.resize(it.second.size());
+
+	Json::Value::ArrayIndex idx = 0;
+
+	for (const auto& pit : it.second)
+	{
+	    Json::Value picture(Json::objectValue);
+
+	    switch (pit.first)
+	    {
+		case zeppelin::library::Picture::FrontCover :
+		    picture["type"] = "frontcover";
+		    break;
+		case zeppelin::library::Picture::BackCover :
+		    picture["type"] = "backcover";
+		    break;
+	    }
+
+	    picture["mimetype"] = pit.second->getMimeType();
+
+	    // convert the contents of the picture to base64
+	    std::ostringstream os;
+	    std::copy(Base64(&pit.second->getData()[0]),
+		      Base64(&pit.second->getData()[0] + pit.second->getData().size()),
+		      ostream_iterator<char>(os));
+	    picture["data"] = os.str();
+
+	    // add the picture to the array
+	    pictures[idx++].swap(picture);
+	}
+
+	// add the picture list to the object of albums
+	response[it.first].swap(pictures);
     }
 }
 

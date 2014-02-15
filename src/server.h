@@ -45,6 +45,7 @@ class Server : public zeppelin::plugin::Plugin
 	// library - albums
 	void libraryGetAlbumIdsByArtist(const Json::Value& request, Json::Value& response);
 	void libraryGetAlbums(const Json::Value& request, Json::Value& response);
+	void libraryGetPicturesOfAlbums(const Json::Value& request, Json::Value& response);
 
 	// library - files
 	void libraryGetFiles(const Json::Value& request, Json::Value& response);
