@@ -324,7 +324,7 @@ void Server::libraryGetPicturesOfAlbums(const Json::Value& request, Json::Value&
 	}
 
 	// add the picture list to the object of albums
-	response[it.first].swap(pictures);
+	response[std::to_string(it.first)].swap(pictures);
     }
 }
 
