@@ -2,8 +2,8 @@
 
 // =====================================================================================================================
 extern "C"
-zeppelin::plugin::Plugin* plugin_create(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
-					const std::shared_ptr<zeppelin::player::Controller>& ctrl)
+std::shared_ptr<zeppelin::plugin::Plugin> plugin_create(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
+							const std::shared_ptr<zeppelin::player::Controller>& ctrl)
 {
-    return new Server(library, ctrl);
+    return std::make_shared<Server>(library, ctrl);
 }
