@@ -29,6 +29,7 @@ Server::Server(const std::shared_ptr<zeppelin::library::MusicLibrary>& library,
 {
     // library
     REGISTER_RPC_METHOD("library_scan", libraryScan);
+    REGISTER_RPC_METHOD("library_get_status", libraryGetStatus);
     REGISTER_RPC_METHOD("library_get_statistics", libraryGetStatistics);
 
     // library - artists
@@ -182,6 +183,15 @@ std::unique_ptr<httpserver::HttpResponse> Server::processRequest(const httpserve
 void Server::libraryScan(const Json::Value& request, Json::Value& response)
 {
     m_library->scan();
+}
+
+// =====================================================================================================================
+void Server::libraryGetStatus(const Json::Value& request, Json::Value& response)
+{
+    auto status = m_library->getStatus();
+
+    response = Json::Value(Json::objectValue);
+    response["scanner_running"] = status.m_scannerRunning;
 }
 
 // =====================================================================================================================
