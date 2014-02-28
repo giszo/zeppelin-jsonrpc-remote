@@ -192,6 +192,7 @@ void Server::libraryGetStatus(const Json::Value& request, Json::Value& response)
 
     response = Json::Value(Json::objectValue);
     response["scanner_running"] = status.m_scannerRunning;
+    response["metaparser_running"] = status.m_metaParserRunning;
 }
 
 // =====================================================================================================================
