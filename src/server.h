@@ -1,3 +1,9 @@
+/**
+ * This file is part of the Zeppelin music player project.
+ * Copyright (c) 2013-2014 Zoltan Kovacs, Lajos Santa
+ * See http://zeppelin-player.com for more details.
+ */
+
 #ifndef JSONRPCREMOTE_SERVER_H_INCLUDED
 #define JSONRPCREMOTE_SERVER_H_INCLUDED
 
